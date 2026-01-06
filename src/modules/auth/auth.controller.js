@@ -1,49 +1,51 @@
-import bcrypt from "bcrypt";
-import jwt from "jsonwebtoken";
-import User from "./auth.model.js";
-
-const JWT_SECRET = process.env.JWT_SECRET;
-
-export async function register(req, res) {
+import AuthService from "./auth.service.js";
+async function register(req, res) {
   try {
-    const { email, password } = req.body;
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const user = await User.createUser(email, hashedPassword);
+    const { email, password, username } = req.body;
 
-    const token = jwt.sign(
-      { id: user.id, email: user.email },
-      JWT_SECRET,
-      { expiresIn: "1h" }
-    );
+    // validation حداقلی (وظیفه کنترلر)
+    if (!email || !password) {
+      return res.status(400).json({ error: "Email and password are required" });
+    }
 
-    res.json({ token });
+    const result = await AuthService.register({
+      email,
+      password,
+      username,
+    });
+
+    return res.status(201).json(result);
   } catch (err) {
-    console.error(err);
-    if (err.code === "P2002") {
-      // Prisma unique constraint error
+    if (err.code === "EMAIL_EXISTS") {
       return res.status(400).json({ error: "Email already exists" });
     }
-    res.status(500).json({ error: err.message });
+
+    console.error(err);
+    return res.status(500).json({ message: err.message });
   }
 }
 
-export async function login(req, res) {
+async function login(req, res) {
   try {
-    const { email, password } = req.body;
-    const user = await User.findByEmail(email);
-    if (!user) return res.status(400).json({ error: "Invalid credentials" });
+    const { identifier, password } = req.body;
 
-    const match = await bcrypt.compare(password, user.password);
-    if (!match) return res.status(400).json({ error: "Invalid credentials" });
+    if (!identifier || !password) {
+      return res.status(400).json({ error: "Identifier and password are required" });
+    }
 
-    const token = jwt.sign(
-      { id: user.id, email: user.email },
-      JWT_SECRET,
-      { expiresIn: "1h" }
-    );
+    const result = await AuthService.login({ identifier, password });
 
-    res.json({ token });
+    return res.status(200).json(result);
   } catch (err) {
-    res.status(500).json({ error: "Server error" });
+    if (err.code === "INVALID_CREDENTIALS") {
+      return res.status(401).json({ error: "Invalid credentials" });
+    }
+
+    console.error(err);
+    return res.status(500).json({ error: "Server error" });
   }
+}
+export default {
+  register,
+  login
 }

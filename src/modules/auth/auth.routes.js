@@ -1,11 +1,11 @@
 import express from "express";
-import { register, login } from "./auth.controller.js";
+import authcontroller from "./auth.controller.js";
 
 const router = express.Router();
 
-router.post("/register", register);
-router.post("/login", login);
+router.post("/register", authcontroller.register);
+router.post("/login", authcontroller.login);
 
 export default router;
-// console.log('register:', typeof authController.register);
-// console.log('login:', typeof authController.login);
+// console.log('register:', typeof authcontroller.register);
+// console.log('login:', typeof authcontroller.login);
